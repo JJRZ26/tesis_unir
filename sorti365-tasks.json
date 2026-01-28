@@ -1,0 +1,528 @@
+{
+  "project": {
+    "name": "Sorti365 Multimodal Chat",
+    "description": "Sistema conversacional multimodal para atención al cliente con procesamiento de texto e imágenes",
+    "version": "0.1.0",
+    "repository": "sorti365-chat"
+  },
+  "currentPhase": 1,
+  "phases": [
+    {
+      "id": 1,
+      "name": "Configuración del Entorno Base",
+      "status": "in_progress",
+      "estimatedDays": 2,
+      "tasks": [
+        {
+          "id": "1.1",
+          "name": "Crear estructura de carpetas del monorepo",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/.gitkeep",
+            "apps/frontend/.gitkeep",
+            "packages/shared/.gitkeep",
+            "docker/.gitkeep"
+          ]
+        },
+        {
+          "id": "1.2",
+          "name": "Configurar package.json root con workspaces",
+          "status": "pending",
+          "priority": "high",
+          "files": ["package.json"],
+          "dependencies": ["1.1"]
+        },
+        {
+          "id": "1.3",
+          "name": "Crear docker-compose para desarrollo",
+          "status": "pending",
+          "priority": "high",
+          "files": ["docker/docker-compose.dev.yml"],
+          "services": ["mongodb", "redis"]
+        },
+        {
+          "id": "1.4",
+          "name": "Crear archivos de configuración",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            ".env.example",
+            ".gitignore",
+            "tsconfig.base.json",
+            ".prettierrc",
+            ".eslintrc.js"
+          ]
+        },
+        {
+          "id": "1.5",
+          "name": "Inicializar package.json de cada app",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/package.json",
+            "apps/frontend/package.json",
+            "packages/shared/package.json"
+          ],
+          "dependencies": ["1.2"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Backend - Estructura Base NestJS",
+      "status": "pending",
+      "estimatedDays": 3,
+      "tasks": [
+        {
+          "id": "2.1",
+          "name": "Inicializar proyecto NestJS",
+          "status": "pending",
+          "priority": "high",
+          "command": "cd apps/backend && nest new . --skip-git"
+        },
+        {
+          "id": "2.2",
+          "name": "Configurar módulo de configuración",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/config/config.module.ts",
+            "apps/backend/src/config/configuration.ts",
+            "apps/backend/src/config/validation.ts"
+          ]
+        },
+        {
+          "id": "2.3",
+          "name": "Configurar conexión MongoDB",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/database/database.module.ts"
+          ],
+          "packages": ["@nestjs/mongoose", "mongoose"]
+        },
+        {
+          "id": "2.4",
+          "name": "Configurar conexión Redis",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/cache/cache.module.ts"
+          ],
+          "packages": ["@nestjs/cache-manager", "cache-manager-redis-store"]
+        },
+        {
+          "id": "2.5",
+          "name": "Implementar health checks",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/health/health.module.ts",
+            "apps/backend/src/health/health.controller.ts"
+          ],
+          "packages": ["@nestjs/terminus"]
+        },
+        {
+          "id": "2.6",
+          "name": "Configurar manejo global de errores",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/common/filters/http-exception.filter.ts",
+            "apps/backend/src/common/interceptors/logging.interceptor.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Backend - Módulo de Chat",
+      "status": "pending",
+      "estimatedDays": 4,
+      "tasks": [
+        {
+          "id": "3.1",
+          "name": "Crear schemas de MongoDB",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/schemas/chat-session.schema.ts",
+            "apps/backend/src/chat/schemas/chat-message.schema.ts"
+          ]
+        },
+        {
+          "id": "3.2",
+          "name": "Crear DTOs de chat",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/dto/create-session.dto.ts",
+            "apps/backend/src/chat/dto/send-message.dto.ts",
+            "apps/backend/src/chat/dto/message-response.dto.ts"
+          ]
+        },
+        {
+          "id": "3.3",
+          "name": "Implementar ChatService",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/chat.service.ts"
+          ]
+        },
+        {
+          "id": "3.4",
+          "name": "Implementar ChatController (REST)",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/chat.controller.ts"
+          ]
+        },
+        {
+          "id": "3.5",
+          "name": "Implementar ChatGateway (WebSocket)",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/chat.gateway.ts"
+          ],
+          "packages": ["@nestjs/websockets", "@nestjs/platform-socket.io", "socket.io"]
+        },
+        {
+          "id": "3.6",
+          "name": "Crear ChatModule",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/chat/chat.module.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Backend - Procesamiento Multimodal",
+      "status": "pending",
+      "estimatedDays": 5,
+      "tasks": [
+        {
+          "id": "4.1",
+          "name": "Crear cliente de Claude API",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/llm/anthropic.service.ts",
+            "apps/backend/src/llm/llm.module.ts"
+          ],
+          "packages": ["@anthropic-ai/sdk"]
+        },
+        {
+          "id": "4.2",
+          "name": "Crear prompts para verificación de tickets",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/multimodal/prompts/ticket-analysis.prompt.ts"
+          ]
+        },
+        {
+          "id": "4.3",
+          "name": "Crear prompts para KYC",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/multimodal/prompts/kyc-document.prompt.ts",
+            "apps/backend/src/multimodal/prompts/kyc-selfie.prompt.ts"
+          ]
+        },
+        {
+          "id": "4.4",
+          "name": "Implementar MultimodalService",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/multimodal/multimodal.service.ts"
+          ]
+        },
+        {
+          "id": "4.5",
+          "name": "Implementar procesamiento de imágenes",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/multimodal/image-processor.service.ts"
+          ],
+          "packages": ["sharp"]
+        },
+        {
+          "id": "4.6",
+          "name": "Crear MultimodalModule",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/multimodal/multimodal.module.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Backend - OCR y Visión",
+      "status": "pending",
+      "estimatedDays": 4,
+      "tasks": [
+        {
+          "id": "5.1",
+          "name": "Implementar servicio OCR con Tesseract",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/ocr/ocr.service.ts",
+            "apps/backend/src/ocr/ocr.module.ts"
+          ],
+          "packages": ["tesseract.js"]
+        },
+        {
+          "id": "5.2",
+          "name": "Implementar validación de calidad de imagen",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/vision/quality-validator.service.ts"
+          ]
+        },
+        {
+          "id": "5.3",
+          "name": "Implementar detección de tipo de documento",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/vision/document-detector.service.ts"
+          ]
+        },
+        {
+          "id": "5.4",
+          "name": "Crear VisionModule",
+          "status": "pending",
+          "priority": "medium",
+          "files": [
+            "apps/backend/src/vision/vision.module.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Backend - Lógica de Negocio",
+      "status": "pending",
+      "estimatedDays": 4,
+      "tasks": [
+        {
+          "id": "6.1",
+          "name": "Crear servicio de verificación de tickets",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/ticket-verification/ticket-verification.service.ts",
+            "apps/backend/src/ticket-verification/ticket-verification.module.ts"
+          ]
+        },
+        {
+          "id": "6.2",
+          "name": "Crear mock de API de Sorti365",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/external/sorti365-api.service.ts",
+            "apps/backend/src/external/sorti365-api.mock.ts"
+          ]
+        },
+        {
+          "id": "6.3",
+          "name": "Crear servicio de verificación KYC",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/backend/src/kyc-verification/kyc-verification.service.ts",
+            "apps/backend/src/kyc-verification/kyc-verification.module.ts"
+          ]
+        },
+        {
+          "id": "6.4",
+          "name": "Integrar servicios en ChatService",
+          "status": "pending",
+          "priority": "high",
+          "description": "Modificar ChatService para orquestar verificación de tickets y KYC"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Frontend - Chat Interface",
+      "status": "pending",
+      "estimatedDays": 5,
+      "tasks": [
+        {
+          "id": "7.1",
+          "name": "Inicializar proyecto Next.js 15",
+          "status": "pending",
+          "priority": "high",
+          "command": "cd apps/frontend && npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir"
+        },
+        {
+          "id": "7.2",
+          "name": "Crear tipos compartidos",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "packages/shared/src/types/chat.types.ts",
+            "packages/shared/src/types/message.types.ts"
+          ]
+        },
+        {
+          "id": "7.3",
+          "name": "Crear hook useChat",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/hooks/useChat.ts"
+          ]
+        },
+        {
+          "id": "7.4",
+          "name": "Crear hook useWebSocket",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/hooks/useWebSocket.ts"
+          ],
+          "packages": ["socket.io-client"]
+        },
+        {
+          "id": "7.5",
+          "name": "Crear componente ChatContainer",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/components/chat/ChatContainer.tsx"
+          ]
+        },
+        {
+          "id": "7.6",
+          "name": "Crear componente MessageList",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/components/chat/MessageList.tsx"
+          ]
+        },
+        {
+          "id": "7.7",
+          "name": "Crear componente MessageBubble",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/components/chat/MessageBubble.tsx"
+          ]
+        },
+        {
+          "id": "7.8",
+          "name": "Crear componente ChatInput",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/components/chat/ChatInput.tsx"
+          ]
+        },
+        {
+          "id": "7.9",
+          "name": "Crear componente ImageUploader",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/components/chat/ImageUploader.tsx"
+          ]
+        },
+        {
+          "id": "7.10",
+          "name": "Crear página principal del chat",
+          "status": "pending",
+          "priority": "high",
+          "files": [
+            "apps/frontend/src/app/chat/page.tsx",
+            "apps/frontend/src/app/chat/layout.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Integración y Testing",
+      "status": "pending",
+      "estimatedDays": 4,
+      "tasks": [
+        {
+          "id": "8.1",
+          "name": "Configurar CORS en backend",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "8.2",
+          "name": "Tests unitarios de servicios backend",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "8.3",
+          "name": "Tests de integración de APIs",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "8.4",
+          "name": "Probar flujo completo de verificación de ticket",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "8.5",
+          "name": "Probar flujo completo de KYC",
+          "status": "pending",
+          "priority": "high"
+        }
+      ]
+    }
+  ],
+  "instructions": {
+    "general": [
+      "Seguir el orden de las fases secuencialmente",
+      "Completar cada tarea antes de pasar a la siguiente",
+      "Verificar que el código funcione antes de avanzar",
+      "Usar TypeScript estricto en todo el proyecto",
+      "Documentar funciones complejas con JSDoc"
+    ],
+    "codeStyle": {
+      "language": "typescript",
+      "indent": 2,
+      "quotes": "single",
+      "semicolons": true,
+      "trailingComma": "es5"
+    },
+    "naming": {
+      "files": "kebab-case",
+      "classes": "PascalCase",
+      "functions": "camelCase",
+      "constants": "UPPER_SNAKE_CASE",
+      "interfaces": "PascalCase (prefix with I optional)"
+    }
+  },
+  "nextTask": {
+    "phase": 1,
+    "taskId": "1.1",
+    "description": "Crear estructura de carpetas del monorepo",
+    "action": "Crear las carpetas apps/backend, apps/frontend, packages/shared, y docker con archivos .gitkeep"
+  }
+}
