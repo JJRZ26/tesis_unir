@@ -5,6 +5,7 @@ import { CacheModule } from './cache/cache.module';
 import { HealthModule } from './health/health.module';
 import { ChatModule } from './chat/chat.module';
 import { MultimodalModule } from './multimodal/multimodal.module';
+import { OrchestratorModule } from './orchestrator/orchestrator.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MultimodalModule } from './multimodal/multimodal.module';
     HealthModule,
     ChatModule,
     MultimodalModule,
+    OrchestratorModule,
   ],
 })
 export class AppModule {}

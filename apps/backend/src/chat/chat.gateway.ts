@@ -8,9 +8,11 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { ProcessingStatus } from '../orchestrator/interfaces/orchestrator.types';
 
 interface JoinPayload {
   sessionId: string;
@@ -18,7 +20,9 @@ interface JoinPayload {
 
 interface MessagePayload {
   sessionId: string;
+  playerId?: string;
   content: SendMessageDto['content'];
+  images?: Array<{ base64?: string; url?: string }>;
 }
 
 interface TypingPayload {
@@ -37,7 +41,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(ChatGateway.name);
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    @Inject(forwardRef(() => OrchestratorService))
+    private readonly orchestratorService: OrchestratorService,
+  ) {}
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
@@ -76,24 +84,69 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: MessagePayload,
   ) {
     try {
-      const message = await this.chatService.addMessage(payload.sessionId, {
+      // Save user message
+      const userMessage = await this.chatService.addMessage(payload.sessionId, {
         content: payload.content,
       });
 
-      const messageResponse = {
-        id: message._id,
-        sessionId: message.sessionId,
-        role: message.role,
-        content: message.content,
-        createdAt: message.createdAt,
+      const userMessageResponse = {
+        id: userMessage._id,
+        sessionId: userMessage.sessionId,
+        role: userMessage.role,
+        content: userMessage.content,
+        createdAt: userMessage.createdAt,
       };
 
+      // Emit user message to all clients in session
       this.server
         .to(`session:${payload.sessionId}`)
-        .emit('chat:message', messageResponse);
+        .emit('chat:message', userMessageResponse);
 
-      this.logger.log(`Message sent in session ${payload.sessionId}`);
-      return { event: 'chat:message:sent', data: messageResponse };
+      this.logger.log(`User message sent in session ${payload.sessionId}`);
+
+      // Emit typing indicator while processing
+      this.server
+        .to(`session:${payload.sessionId}`)
+        .emit('chat:typing', { sessionId: payload.sessionId });
+
+      // Process message with orchestrator
+      const onStatusUpdate = (status: ProcessingStatus) => {
+        this.server.to(`session:${payload.sessionId}`).emit('chat:status', {
+          sessionId: payload.sessionId,
+          ...status,
+        });
+      };
+
+      const { response, flowType } = await this.orchestratorService.processMessage(
+        {
+          sessionId: payload.sessionId,
+          playerId: payload.playerId,
+          content: payload.content?.text,
+          images: payload.images,
+        },
+        onStatusUpdate,
+      );
+
+      // Get the saved assistant message
+      const messages = await this.chatService.getMessages(payload.sessionId, 1, 0);
+      const assistantMessage = messages[0];
+
+      const assistantMessageResponse = {
+        id: assistantMessage._id,
+        sessionId: assistantMessage.sessionId,
+        role: assistantMessage.role,
+        content: assistantMessage.content,
+        createdAt: assistantMessage.createdAt,
+        flowType,
+      };
+
+      // Emit assistant response
+      this.server
+        .to(`session:${payload.sessionId}`)
+        .emit('chat:message', assistantMessageResponse);
+
+      this.logger.log(`Assistant response sent in session ${payload.sessionId}`);
+      return { event: 'chat:message:sent', data: assistantMessageResponse };
     } catch (error) {
       this.logger.error(`Error sending message: ${error.message}`);
       client.emit('chat:error', { message: 'Failed to send message' });

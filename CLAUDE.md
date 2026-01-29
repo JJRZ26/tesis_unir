@@ -108,7 +108,7 @@ sorti365-chat/
 │           ├── health/           ✅ Completado
 │           ├── chat/             ✅ Completado
 │           ├── multimodal/       ✅ Completado (OpenAI GPT-4 Vision)
-│           ├── orchestrator/     ⬜ FASE 6
+│           ├── orchestrator/     ✅ Completado
 │           └── common/           ✅ Completado
 │
 ├── services/                     # Microservicios Python
@@ -183,16 +183,96 @@ sorti365-chat/
 
 ---
 
-### ⬜ FASE 5 - Microservicios Python - SIGUIENTE
-- 5a: OCR Service (Puerto 8001)
-- 5b: NLP Service (Puerto 8002)
-- 5c: Clustering Service (Puerto 8003)
+### ✅ FASE 5 - Microservicios Python (COMPLETADA)
+
+**5a: OCR Service (Puerto 8001)** - Tesseract + OpenCV
+- `services/ocr-service/` - Extracción de texto de imágenes
+- Endpoints: `/api/ocr/extract`, `/api/ocr/extract/ticket`, `/api/ocr/extract/document`
+- Preprocesamiento adaptativo de imágenes
+
+**5b: NLP Service (Puerto 8002)** - spaCy + Sentence-BERT
+- `services/nlp-service/` - Procesamiento de lenguaje natural
+- Endpoints: `/api/nlp/analyze`, `/api/nlp/entities`, `/api/nlp/intent`, `/api/nlp/embedding`
+- Clasificación de intents y extracción de entidades
+
+**5c: Clustering Service (Puerto 8003)** - scikit-learn + HDBSCAN
+- `services/clustering-service/` - Agrupación de textos similares
+- Endpoints: `/api/clustering/cluster`, `/api/clustering/similar`, `/api/clustering/embeddings`
+- Algoritmos: K-means, DBSCAN, HDBSCAN, Agglomerative
+
+**Docker Compose actualizado** con todos los servicios.
 
 ---
 
-### ⬜ FASE 6 - Orquestador y Lógica de Negocio (NestJS)
+### ✅ FASE 6 - Orquestador y Lógica de Negocio (NestJS) (COMPLETADA)
 
-### ⬜ FASE 7 - Frontend Chat (Next.js)
+**Archivos creados en** `apps/backend/src/orchestrator/`:
+
+- `orchestrator.config.ts` - Configuración de URLs de microservicios
+- `services/microservices-client.service.ts` - Cliente HTTP para OCR, NLP, Clustering
+- `services/ticket-verification.service.ts` - Flujo de verificación de tickets
+- `services/kyc-verification.service.ts` - Flujo de verificación KYC
+- `orchestrator.service.ts` - Coordinador principal de flujos
+- `orchestrator.controller.ts` - Endpoints REST
+- `orchestrator.module.ts` - Módulo NestJS
+- `dto/process-message.dto.ts` - DTOs
+- `interfaces/orchestrator.types.ts` - Tipos e interfaces
+
+**Endpoints**:
+- `GET /orchestrator/health` - Estado de todos los servicios
+- `POST /orchestrator/process` - Procesar mensaje (auto-detecta flujo)
+- `POST /orchestrator/verify/ticket` - Verificar ticket
+- `POST /orchestrator/verify/document` - Verificar documento KYC
+- `POST /orchestrator/verify/selfie` - Verificar selfie KYC
+- `POST /orchestrator/verify/kyc` - Verificación KYC completa
+
+**WebSocket integrado**: ChatGateway actualizado para procesar mensajes en tiempo real con actualizaciones de estado.
+
+---
+
+### ✅ FASE 7 - Frontend Chat (Next.js) (COMPLETADA)
+
+**Archivos creados en** `apps/frontend/`:
+
+**Configuración:**
+- `next.config.js` - Configuración de Next.js con variables de entorno
+- `tailwind.config.js` - Configuración de Tailwind con colores Sorti365
+- `postcss.config.js` - Configuración PostCSS
+- `tsconfig.json` - Configuración TypeScript
+- `.env.local.example` - Variables de entorno de ejemplo
+- `Dockerfile` - Containerización del frontend
+
+**Tipos:**
+- `src/types/chat.types.ts` - Tipos para mensajes, sesiones, estados
+
+**Hooks:**
+- `src/hooks/useSocket.ts` - Hook para conexión WebSocket
+- `src/hooks/useChat.ts` - Hook principal para chat (sesiones, mensajes, estado)
+
+**Componentes:**
+- `src/components/chat/ChatContainer.tsx` - Contenedor principal
+- `src/components/chat/ChatHeader.tsx` - Cabecera con estado de conexión
+- `src/components/chat/MessageList.tsx` - Lista de mensajes con scroll automático
+- `src/components/chat/MessageBubble.tsx` - Burbujas de mensaje (user/assistant)
+- `src/components/chat/MessageInput.tsx` - Input con soporte para texto e imágenes
+- `src/components/chat/ImagePreview.tsx` - Preview de imágenes adjuntas
+- `src/components/chat/TypingIndicator.tsx` - Indicador de escritura con estado de procesamiento
+- `src/components/chat/ErrorBanner.tsx` - Banner de errores
+
+**Páginas:**
+- `src/app/layout.tsx` - Layout raíz con metadata
+- `src/app/page.tsx` - Página principal del chat
+- `src/app/globals.css` - Estilos globales y animaciones
+
+**Funcionalidades:**
+- WebSocket con reconexión automática
+- Soporte para texto e imágenes (hasta 5)
+- Indicador de estado de procesamiento en tiempo real
+- Diseño responsive
+- Colores personalizados Sorti365
+- URL param `?playerId=xxx` para usuarios autenticados
+
+---
 
 ### ⬜ FASE 8 - Integración y Testing
 
