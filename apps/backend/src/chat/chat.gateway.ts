@@ -127,9 +127,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         onStatusUpdate,
       );
 
-      // Get the saved assistant message
-      const messages = await this.chatService.getMessages(payload.sessionId, 1, 0);
-      const assistantMessage = messages[0];
+      // Get the most recent message (the assistant's response we just saved)
+      // Messages are sorted by createdAt ascending, so the last one is the newest
+      const allMessages = await this.chatService.getMessages(payload.sessionId, 100, 0);
+      const assistantMessage = allMessages[allMessages.length - 1];
 
       const assistantMessageResponse = {
         id: assistantMessage._id,

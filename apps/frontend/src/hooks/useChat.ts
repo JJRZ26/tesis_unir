@@ -88,11 +88,15 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
     // Chat events
     socketRef.current.on('chat:message', (message: ChatMessage) => {
+      console.log('Received message:', message);
       setMessages((prev) => {
-        // Avoid duplicates
-        if (prev.some((m) => m.id === message.id)) {
+        // Avoid duplicates - compare as strings in case of ObjectId
+        const messageId = String(message.id);
+        if (prev.some((m) => String(m.id) === messageId)) {
+          console.log('Duplicate message, ignoring:', messageId);
           return prev;
         }
+        console.log('Adding message to list:', messageId);
         return [...prev, message];
       });
       setIsTyping(false);

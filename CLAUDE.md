@@ -274,7 +274,38 @@ sorti365-chat/
 
 ---
 
-### ⬜ FASE 8 - Integración y Testing
+### ✅ FASE 8 - Integración y Testing (COMPLETADA)
+
+**Tests Backend (NestJS)**:
+- `src/chat/chat.service.spec.ts` - Tests unitarios del ChatService
+- `src/multimodal/multimodal.service.spec.ts` - Tests unitarios del MultimodalService
+- `src/orchestrator/orchestrator.service.spec.ts` - Tests unitarios del OrchestratorService
+- `test/chat.e2e-spec.ts` - Tests e2e del Chat API
+- `test/orchestrator.e2e-spec.ts` - Tests e2e del Orchestrator API
+
+**Tests Microservicios Python**:
+- `services/ocr-service/tests/test_ocr_service.py` - Tests del OCR Service
+- `services/nlp-service/tests/test_nlp_service.py` - Tests del NLP Service
+- `services/clustering-service/tests/test_clustering_service.py` - Tests del Clustering Service
+
+**Scripts de Integración**:
+- `scripts/integration-test.sh` - Script de integración para Linux/Mac
+- `scripts/integration-test.ps1` - Script de integración para Windows
+- `scripts/run-all-tests.ps1` - Ejecutar todos los tests del proyecto
+
+**Ejecutar tests**:
+```bash
+# Backend NestJS
+cd apps/backend && npm test
+
+# Microservicios Python
+cd services/ocr-service && pytest
+cd services/nlp-service && pytest
+cd services/clustering-service && pytest
+
+# Tests de integración (requiere servicios activos)
+./scripts/integration-test.ps1
+```
 
 ---
 
