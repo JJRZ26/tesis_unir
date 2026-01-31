@@ -6,6 +6,7 @@ import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
+import { BackofficeModule } from '../backoffice/backoffice.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { OrchestratorModule } from '../orchestrator/orchestrator.module';
       { name: ChatMessage.name, schema: ChatMessageSchema },
     ]),
     forwardRef(() => OrchestratorModule),
+    BackofficeModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

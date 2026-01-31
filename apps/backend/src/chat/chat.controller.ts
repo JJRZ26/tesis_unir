@@ -12,10 +12,14 @@ import type { Request } from 'express';
 import { ChatService } from './chat.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { BackofficeService } from '../backoffice/backoffice.service';
 
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly backofficeService: BackofficeService,
+  ) {}
 
   @Post('sessions')
   async createSession(
@@ -94,6 +98,39 @@ export class ChatController {
       id: session._id,
       status: session.status,
       message: 'Session closed successfully',
+    };
+  }
+
+  /**
+   * Get player info by playerId (accountInfo.playerId)
+   * Returns player data if found, or null if not found
+   */
+  @Get('player/:playerId')
+  async getPlayerInfo(@Param('playerId') playerId: string) {
+    const result = await this.backofficeService.findPlayerByAccountPlayerId(playerId);
+
+    if (!result.found || !result.player) {
+      return {
+        found: false,
+        player: null,
+      };
+    }
+
+    const player = result.player;
+    return {
+      found: true,
+      player: {
+        playerId: player.accountInfo?.playerId,
+        firstName: player.personalInfo?.firstName,
+        lastName: player.personalInfo?.lastName,
+        nickname: player.personalInfo?.nickname,
+        username: player.personalInfo?.username,
+        email: player.personalInfo?.email,
+        displayName: this.backofficeService.getPlayerDisplayName(player),
+        isVerified: this.backofficeService.isPlayerVerified(player),
+        balance: player.accountInfo?.balance,
+        currency: 'COP', // Default currency, could be fetched from currencyId
+      },
     };
   }
 }

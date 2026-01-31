@@ -35,6 +35,50 @@ export class LastVerifiedTicket {
   verifiedAt: Date;
 }
 
+export enum KYCStep {
+  NOT_STARTED = 'not_started',
+  FRONT_DOCUMENT = 'front_document',
+  BACK_DOCUMENT = 'back_document',
+  SELFIE = 'selfie',
+  COMPLETED = 'completed',
+}
+
+@Schema({ _id: false })
+export class KYCState {
+  @Prop({ type: String, enum: KYCStep, default: KYCStep.NOT_STARTED })
+  currentStep: KYCStep;
+
+  @Prop()
+  documentNumber?: string;
+
+  @Prop()
+  fullName?: string;
+
+  @Prop()
+  dateOfBirth?: string;
+
+  @Prop()
+  frontImageVerified?: boolean;
+
+  @Prop()
+  backImageVerified?: boolean;
+
+  @Prop()
+  selfieVerified?: boolean;
+
+  @Prop()
+  frontImageBase64?: string;
+
+  @Prop()
+  backImageBase64?: string;
+
+  @Prop()
+  startedAt?: Date;
+
+  @Prop()
+  completedAt?: Date;
+}
+
 @Schema({ timestamps: true, collection: 'chat_sessions' })
 export class ChatSession {
   @Prop()
@@ -51,6 +95,9 @@ export class ChatSession {
 
   @Prop({ type: LastVerifiedTicket })
   lastVerifiedTicket?: LastVerifiedTicket;
+
+  @Prop({ type: KYCState })
+  kycState?: KYCState;
 
   createdAt: Date;
   updatedAt: Date;

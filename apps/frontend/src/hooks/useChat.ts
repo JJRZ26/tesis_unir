@@ -10,6 +10,9 @@ import {
   ContentType,
   ChatError,
   StatusUpdate,
+  PlayerInfo,
+  PlayerInfoResponse,
+  MessageRole,
 } from '@/types';
 
 interface UseChatOptions {
@@ -25,6 +28,7 @@ interface UseChatReturn {
   isTyping: boolean;
   processingStatus: ProcessingStatus | null;
   error: ChatError | null;
+  playerInfo: PlayerInfo | null;
   createSession: (playerId?: string) => Promise<ChatSession | null>;
   sendMessage: (text: string, images?: File[]) => Promise<void>;
   clearError: () => void;
@@ -43,9 +47,11 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const [isTyping, setIsTyping] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [error, setError] = useState<ChatError | null>(null);
+  const [playerInfo, setPlayerInfo] = useState<PlayerInfo | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const playerInfoFetchedRef = useRef<boolean>(false);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -55,6 +61,33 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setError(err);
     onError?.(err);
   }, [onError]);
+
+  // Fetch player info when playerId is provided
+  const fetchPlayerInfo = useCallback(async (playerIdToFetch: string): Promise<PlayerInfo | null> => {
+    try {
+      const response = await fetch(`${API_URL}/api/chat/player/${playerIdToFetch}`);
+      if (!response.ok) {
+        return null;
+      }
+      const data: PlayerInfoResponse = await response.json();
+      if (data.found && data.player) {
+        setPlayerInfo(data.player);
+        return data.player;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching player info:', err);
+      return null;
+    }
+  }, []);
+
+  // Fetch player info on mount if playerId is provided
+  useEffect(() => {
+    if (playerId && !playerInfoFetchedRef.current) {
+      playerInfoFetchedRef.current = true;
+      fetchPlayerInfo(playerId);
+    }
+  }, [playerId, fetchPlayerInfo]);
 
   // Initialize socket connection
   useEffect(() => {
@@ -165,10 +198,46 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         `${API_URL}/api/chat/sessions/${newSession.id}/messages`
       );
 
+      let existingMessages: ChatMessage[] = [];
       if (messagesResponse.ok) {
-        const existingMessages: ChatMessage[] = await messagesResponse.json();
-        setMessages(existingMessages);
+        existingMessages = await messagesResponse.json();
       }
+
+      // If no messages exist, add a welcome message
+      if (existingMessages.length === 0) {
+        // Try to get player info if we have a playerId
+        let currentPlayerInfo = playerInfo;
+        if ((sessionPlayerId || playerId) && !currentPlayerInfo) {
+          currentPlayerInfo = await fetchPlayerInfo(sessionPlayerId || playerId!);
+        }
+
+        // Create personalized welcome message
+        let welcomeText: string;
+        if (currentPlayerInfo) {
+          welcomeText = `¡Hola ${currentPlayerInfo.displayName}! 👋 Soy el asistente virtual de Sorti365.\n\n¿En qué puedo ayudarte hoy?\n\n• Verificar tickets de apuestas (envía el ID o una foto)\n• Verificar tu identidad (KYC)\n• Responder preguntas sobre tu cuenta`;
+        } else if (sessionPlayerId || playerId) {
+          // PlayerId provided but player not found in database
+          welcomeText = '¡Hola! 👋 Soy el asistente virtual de Sorti365.\n\nNo encontré tu cuenta en nuestro sistema. ¿En qué puedo ayudarte?\n\n• Verificar tickets de apuestas (envía el ID o una foto)\n• Consultas generales sobre nuestros servicios';
+        } else {
+          // No playerId - anonymous user
+          welcomeText = '¡Hola! 👋 Soy el asistente virtual de Sorti365.\n\n¿En qué puedo ayudarte hoy?\n\n• Verificar tickets de apuestas (envía el ID o una foto)\n• Consultas generales\n\n💡 *Si deseas verificar tu identidad o acceder a funciones de cuenta, inicia sesión en la plataforma.*';
+        }
+
+        const welcomeMessage: ChatMessage = {
+          id: `welcome-${Date.now()}`,
+          sessionId: newSession.id,
+          role: MessageRole.ASSISTANT,
+          content: {
+            type: ContentType.TEXT,
+            text: welcomeText,
+          },
+          createdAt: new Date().toISOString(),
+        };
+
+        existingMessages = [welcomeMessage];
+      }
+
+      setMessages(existingMessages);
 
       return newSession;
     } catch (err) {
@@ -178,7 +247,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [playerId, clearError, handleError]);
+  }, [playerId, playerInfo, clearError, handleError, fetchPlayerInfo]);
 
   // Convert file to base64
   const fileToBase64 = useCallback((file: File): Promise<string> => {
@@ -249,6 +318,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     isTyping,
     processingStatus,
     error,
+    playerInfo,
     createSession,
     sendMessage,
     clearError,

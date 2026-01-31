@@ -94,3 +94,21 @@ export interface StatusUpdate {
   message: string;
   progress?: number;
 }
+
+export interface PlayerInfo {
+  playerId: number;
+  firstName?: string;
+  lastName?: string;
+  nickname?: string;
+  username?: string;
+  email?: string;
+  displayName: string;
+  isVerified: boolean;
+  balance?: number;
+  currency?: string;
+}
+
+export interface PlayerInfoResponse {
+  found: boolean;
+  player: PlayerInfo | null;
+}

@@ -4,6 +4,8 @@ export enum ProcessingStep {
   EXTRACTING_TEXT = 'extracting_text',
   PROCESSING_NLP = 'processing_nlp',
   QUERYING_API = 'querying_api',
+  VERIFYING_DOCUMENT = 'verifying_document',
+  COMPARING_FACES = 'comparing_faces',
   GENERATING_RESPONSE = 'generating_response',
   COMPLETED = 'completed',
   ERROR = 'error',

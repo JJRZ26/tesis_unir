@@ -123,4 +123,51 @@ export class OpenAIService implements OnModuleInit {
   buildImageUrl(base64: string, mimeType: string = 'image/jpeg'): string {
     return `data:${mimeType};base64,${base64}`;
   }
+
+  /**
+   * Chat with web search capability using OpenAI's web search preview model
+   * This allows GPT-4 to search the internet for real-time information
+   */
+  async chatWithWebSearch(
+    messages: ChatCompletionMessageParam[],
+    options?: Omit<VisionRequestOptions, 'systemPrompt'>,
+  ): Promise<VisionAnalysisResult> {
+    if (!this.client) {
+      throw new Error('OpenAI client not configured. Please set OPENAI_API_KEY.');
+    }
+
+    // Use the search-enabled model
+    const model = 'gpt-4o-search-preview';
+    const maxTokens = options?.maxTokens || this.defaultMaxTokens;
+
+    this.logger.debug(`Sending chat request with web search to ${model}`);
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model,
+        max_tokens: maxTokens,
+        messages,
+        web_search_options: {
+          search_context_size: 'medium',
+        },
+      } as any);
+
+      const choice = response.choices[0];
+
+      return {
+        content: choice.message.content || '',
+        finishReason: choice.finish_reason || 'unknown',
+        model: response.model,
+        usage: {
+          promptTokens: response.usage?.prompt_tokens || 0,
+          completionTokens: response.usage?.completion_tokens || 0,
+          totalTokens: response.usage?.total_tokens || 0,
+        },
+      };
+    } catch (error) {
+      this.logger.warn(`Web search model failed, falling back to regular chat: ${error.message}`);
+      // Fallback to regular chat if search model is not available
+      return this.chat(messages, options);
+    }
+  }
 }

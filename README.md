@@ -26,11 +26,13 @@ cd tesis_unir
 Copia el archivo de ejemplo y edítalo con tu API Key de OpenAI:
 
 **Windows (PowerShell):**
+
 ```powershell
 copy .env.example .env
 ```
 
 **Linux/Mac:**
+
 ```bash
 cp .env.example .env
 ```
@@ -56,6 +58,7 @@ docker-compose -f docker/docker-compose.dev.yml up -d
 ```
 
 **Primera ejecución:** Tardará 10-20 minutos porque descarga:
+
 - Imágenes de Docker (MongoDB, Redis, Python)
 - Modelos de IA (~500MB para NLP)
 - Dependencias de Python
@@ -67,6 +70,7 @@ docker ps
 ```
 
 Deberías ver estos contenedores:
+
 ```
 CONTAINER ID   IMAGE                    STATUS    PORTS                     NAMES
 xxxx           sorti365-clustering      Up        0.0.0.0:8003->8003/tcp   sorti365-clustering
@@ -83,6 +87,7 @@ npm run dev
 ```
 
 Esto inicia:
+
 - **Backend NestJS** en http://localhost:3001
 - **Frontend Next.js** en http://localhost:3000
 
@@ -94,14 +99,14 @@ Abre tu navegador y ve a: **http://localhost:3000**
 
 ## 🔍 URLs del Sistema
 
-| Servicio | URL | Descripción |
-|----------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Interfaz de chat |
-| **Backend API** | http://localhost:3001 | API REST + WebSocket |
-| **Health Check** | http://localhost:3001/api/health | Estado del backend |
-| **OCR Swagger** | http://localhost:8001/docs | Documentación OCR |
-| **NLP Swagger** | http://localhost:8002/docs | Documentación NLP |
-| **Clustering Swagger** | http://localhost:8003/docs | Documentación Clustering |
+| Servicio               | URL                              | Descripción              |
+| ---------------------- | -------------------------------- | ------------------------ |
+| **Frontend**           | http://localhost:3000            | Interfaz de chat         |
+| **Backend API**        | http://localhost:3001            | API REST + WebSocket     |
+| **Health Check**       | http://localhost:3001/api/health | Estado del backend       |
+| **OCR Swagger**        | http://localhost:8001/docs       | Documentación OCR        |
+| **NLP Swagger**        | http://localhost:8002/docs       | Documentación NLP        |
+| **Clustering Swagger** | http://localhost:8003/docs       | Documentación Clustering |
 
 ---
 
@@ -157,7 +162,7 @@ npm run test
 
 ### Opción 1: Interfaz Web
 
-1. Abre http://localhost:3000
+1. Abre http://localhost:3000 o http://localhost:3000?playerId=13332
 2. Escribe "Hola, necesito ayuda" y envía
 3. Sube una imagen de un ticket de apuestas
 4. El sistema analizará la imagen y responderá
@@ -217,6 +222,7 @@ curl http://localhost:8003/health
 ### ¿Necesito entrenar algún modelo?
 
 **NO.** Todos los modelos son pre-entrenados y se descargan automáticamente:
+
 - **spaCy**: Modelo de español para extracción de entidades
 - **Sentence-BERT**: Para clasificación de intenciones
 - **GPT-4 Vision**: Servicio de OpenAI para análisis de imágenes
@@ -224,6 +230,7 @@ curl http://localhost:8003/health
 ### ¿Por qué tarda tanto la primera vez?
 
 La primera ejecución descarga:
+
 - Imágenes de Docker (~2GB)
 - Modelo spaCy español (~40MB)
 - Modelo Sentence-BERT (~500MB)
@@ -293,9 +300,11 @@ tesis_unir/
 ## 🎯 Casos de Uso
 
 ### 1. Verificación de Tickets
+
 Usuario envía captura de ticket → Sistema extrae ticketId con OCR/Vision → Consulta estado → Responde con información
 
 ### 2. Verificación KYC
+
 Usuario envía fotos de cédula + selfie → Sistema valida identidad con GPT-4 Vision → Aprueba o rechaza
 
 ---

@@ -106,7 +106,8 @@ export class MultimodalService {
 
   /**
    * Generate a contextual response about a verified ticket
-   * Uses GPT-4 to answer user questions based on ticket/bet data
+   * Uses GPT-4 with web search to answer user questions based on ticket/bet data
+   * Can search the internet for match results if the user asks
    */
   async generateTicketContextResponse(
     userQuestion: string,
@@ -117,24 +118,35 @@ export class MultimodalService {
     }
 
     try {
+      // Extract event names for potential web search
+      const events = (betData as any).selections || [];
+      const eventNames = events.map((e: any) => e.eventName || e.event_name || '').filter(Boolean);
+
       const systemPrompt = `Eres un asistente de atención al cliente de Sorti365, una casa de apuestas deportivas.
 El usuario acaba de verificar un ticket y tiene preguntas sobre él.
 
 DATOS DEL TICKET:
 ${JSON.stringify(betData, null, 2)}
 
+EVENTOS EN EL TICKET:
+${eventNames.join(', ')}
+
 Tu tarea:
-1. Responder las preguntas del usuario basándote ÚNICAMENTE en los datos del ticket proporcionados
-2. Si preguntan "por qué perdí" o similar, explica qué eventos fallaron basándote en los resultados
-3. Sé empático y profesional
-4. Al final de tu respuesta, SIEMPRE pregunta si tiene alguna otra duda sobre este ticket o si desea ayuda con algo más (consulta general, otro ticket, etc.)
+1. Responder las preguntas del usuario basándote en los datos del ticket
+2. Si el usuario pregunta por el RESULTADO/MARCADOR de un partido (ej: "¿cuánto quedó?", "¿cuál fue el resultado?"), USA LA HERRAMIENTA DE BÚSQUEDA WEB para buscar el resultado real del partido
+3. Busca en internet: "[nombre del partido] resultado [fecha aproximada]" para obtener el marcador
+4. Si no encuentras el resultado en la búsqueda, sé honesto y di que no pudiste encontrar esa información
+5. Sé empático y profesional
+6. Al final, pregunta si tiene alguna otra duda sobre el ticket o si desea ayuda con algo más
 
 Formato de respuesta:
 - Sé conciso pero informativo
-- Usa emojis relevantes para hacer la respuesta más amigable
-- Si hay eventos perdidos, menciona cuáles y por qué (si tienes la información)`;
+- Usa emojis relevantes
+- Cuando encuentres el marcador, preséntalo claramente (ej: "El partido terminó Bolonia 1 - 2 Atalanta")
+- Si no encuentras la info, sugiere consultar sitios deportivos`;
 
-      const result = await this.openaiService.chat([
+      // Use chat with web search capability
+      const result = await this.openaiService.chatWithWebSearch([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userQuestion },
       ]);
@@ -142,7 +154,27 @@ Formato de respuesta:
       return result.content;
     } catch (error) {
       this.logger.error(`Error generating ticket context response: ${error.message}`);
-      return 'Lo siento, hubo un error al procesar tu pregunta. ¿Podrías reformularla?';
+
+      // Fallback to regular chat without web search
+      try {
+        const fallbackPrompt = `Eres un asistente de Sorti365. El usuario pregunta sobre su ticket.
+
+DATOS DEL TICKET:
+${JSON.stringify(betData, null, 2)}
+
+Pregunta del usuario: ${userQuestion}
+
+Responde basándote en los datos disponibles. Si preguntan por el marcador exacto de un partido, indica honestamente que no tienes acceso a esa información en tiempo real, pero explica el resultado de la apuesta (Won/Lost) según los datos del ticket.`;
+
+        const fallbackResult = await this.openaiService.chat([
+          { role: 'user', content: fallbackPrompt },
+        ]);
+
+        return fallbackResult.content;
+      } catch (fallbackError) {
+        this.logger.error(`Fallback also failed: ${fallbackError.message}`);
+        return 'Lo siento, hubo un error al procesar tu pregunta. ¿Podrías reformularla?';
+      }
     }
   }
 

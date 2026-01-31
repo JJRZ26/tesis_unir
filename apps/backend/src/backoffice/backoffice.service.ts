@@ -187,6 +187,38 @@ export class BackofficeService {
   }
 
   /**
+   * Buscar jugador por accountInfo.playerId (el ID numérico del jugador)
+   */
+  async findPlayerByAccountPlayerId(playerId: string | number): Promise<PlayerSearchResult> {
+    try {
+      const numericPlayerId = typeof playerId === 'string' ? parseInt(playerId, 10) : playerId;
+
+      if (isNaN(numericPlayerId)) {
+        return { found: false, error: 'ID de jugador inválido' };
+      }
+
+      this.logger.log(`Searching player with accountInfo.playerId: ${numericPlayerId}`);
+
+      const player = await this.playerModel.findOne({
+        'accountInfo.playerId': numericPlayerId,
+      }).exec();
+
+      if (!player) {
+        return {
+          found: false,
+          error: `No se encontró ningún jugador con el playerId ${playerId}`,
+        };
+      }
+
+      this.logger.log(`Found player: ${player.personalInfo?.firstName} ${player.personalInfo?.lastName}`);
+      return { found: true, player };
+    } catch (error) {
+      this.logger.error(`Error searching player by playerId: ${error.message}`);
+      return { found: false, error: error.message };
+    }
+  }
+
+  /**
    * Obtener resumen legible de una apuesta
    */
   getBetSummary(bet: BetDocument): BetSummary {
@@ -426,5 +458,80 @@ export class BackofficeService {
       return `${info.firstName || ''} ${info.lastName || ''}`.trim();
     }
     return info.nickname || info.username || 'Usuario';
+  }
+
+  /**
+   * Actualizar el campo verify a true y el documentNumber para un jugador verificado
+   */
+  async setPlayerVerified(
+    playerId: string | number,
+    documentNumber?: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const numericPlayerId = typeof playerId === 'string' ? parseInt(playerId, 10) : playerId;
+
+      if (isNaN(numericPlayerId)) {
+        return { success: false, error: 'ID de jugador inválido' };
+      }
+
+      this.logger.log(`Setting player ${numericPlayerId} as verified`);
+
+      // Build update object
+      const updateFields: Record<string, unknown> = {
+        'verificationAndLocks.verify': true,
+      };
+
+      // Also update documentNumber if provided
+      if (documentNumber) {
+        updateFields['personalInfo.documentNumber'] = documentNumber;
+        this.logger.log(`Also setting documentNumber to ${documentNumber}`);
+      }
+
+      const result = await this.playerModel.updateOne(
+        { 'accountInfo.playerId': numericPlayerId },
+        { $set: updateFields },
+      ).exec();
+
+      if (result.matchedCount === 0) {
+        return { success: false, error: 'Jugador no encontrado' };
+      }
+
+      this.logger.log(`Player ${numericPlayerId} marked as verified`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Error setting player verified: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Verificar si el documento ya está registrado con otro jugador
+   */
+  async isDocumentRegisteredToOtherPlayer(
+    documentNumber: string,
+    currentPlayerId: string | number,
+  ): Promise<{ isRegistered: boolean; error?: string }> {
+    try {
+      const numericPlayerId = typeof currentPlayerId === 'string'
+        ? parseInt(currentPlayerId, 10)
+        : currentPlayerId;
+
+      const existingPlayer = await this.playerModel.findOne({
+        'personalInfo.documentNumber': documentNumber,
+        'accountInfo.playerId': { $ne: numericPlayerId },
+      }).exec();
+
+      return { isRegistered: !!existingPlayer };
+    } catch (error) {
+      this.logger.error(`Error checking document registration: ${error.message}`);
+      return { isRegistered: false, error: error.message };
+    }
+  }
+
+  /**
+   * Obtener el documentNumber del jugador si existe
+   */
+  getPlayerDocumentNumber(player: PlayerDocument): string | null {
+    return player.personalInfo?.documentNumber || null;
   }
 }

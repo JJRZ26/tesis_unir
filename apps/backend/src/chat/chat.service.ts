@@ -6,6 +6,8 @@ import {
   ChatSessionDocument,
   SessionStatus,
   SessionContext,
+  KYCStep,
+  KYCState,
 } from './schemas/chat-session.schema';
 import {
   ChatMessage,
@@ -162,6 +164,101 @@ export class ChatService {
     session.context = SessionContext.GENERAL;
     await session.save();
     this.logger.log(`Session ${sessionId} ticket context cleared`);
+    return session;
+  }
+
+  // ============= KYC State Methods =============
+
+  async getKYCState(sessionId: string): Promise<KYCState | null> {
+    const session = await this.getSession(sessionId);
+    return session.kycState || null;
+  }
+
+  async initKYCProcess(sessionId: string): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+
+    session.kycState = {
+      currentStep: KYCStep.FRONT_DOCUMENT,
+      startedAt: new Date(),
+    };
+    session.context = SessionContext.KYC;
+
+    await session.save();
+    this.logger.log(`KYC process initiated for session ${sessionId}`);
+    return session;
+  }
+
+  async updateKYCFrontDocument(
+    sessionId: string,
+    data: {
+      documentNumber: string;
+      fullName: string;
+      dateOfBirth?: string;
+      frontImageBase64?: string;
+    },
+  ): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+
+    if (!session.kycState) {
+      session.kycState = {
+        currentStep: KYCStep.FRONT_DOCUMENT,
+        startedAt: new Date(),
+      };
+    }
+
+    session.kycState.documentNumber = data.documentNumber;
+    session.kycState.fullName = data.fullName;
+    session.kycState.dateOfBirth = data.dateOfBirth;
+    session.kycState.frontImageVerified = true;
+    session.kycState.frontImageBase64 = data.frontImageBase64;
+    session.kycState.currentStep = KYCStep.BACK_DOCUMENT;
+
+    await session.save();
+    this.logger.log(`KYC front document verified for session ${sessionId}`);
+    return session;
+  }
+
+  async updateKYCBackDocument(
+    sessionId: string,
+    backImageBase64?: string,
+  ): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+
+    if (!session.kycState) {
+      throw new Error('KYC process not started');
+    }
+
+    session.kycState.backImageVerified = true;
+    session.kycState.backImageBase64 = backImageBase64;
+    session.kycState.currentStep = KYCStep.SELFIE;
+
+    await session.save();
+    this.logger.log(`KYC back document verified for session ${sessionId}`);
+    return session;
+  }
+
+  async completeKYCProcess(sessionId: string): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+
+    if (!session.kycState) {
+      throw new Error('KYC process not started');
+    }
+
+    session.kycState.selfieVerified = true;
+    session.kycState.currentStep = KYCStep.COMPLETED;
+    session.kycState.completedAt = new Date();
+
+    await session.save();
+    this.logger.log(`KYC process completed for session ${sessionId}`);
+    return session;
+  }
+
+  async clearKYCState(sessionId: string): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+    session.kycState = undefined;
+    session.context = SessionContext.GENERAL;
+    await session.save();
+    this.logger.log(`KYC state cleared for session ${sessionId}`);
     return session;
   }
 }
