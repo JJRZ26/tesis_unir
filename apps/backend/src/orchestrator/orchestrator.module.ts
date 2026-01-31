@@ -9,6 +9,7 @@ import { TicketVerificationService } from './services/ticket-verification.servic
 import { KYCVerificationService } from './services/kyc-verification.service';
 import { MultimodalModule } from '../multimodal/multimodal.module';
 import { ChatModule } from '../chat/chat.module';
+import { BackofficeModule } from '../backoffice/backoffice.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ChatModule } from '../chat/chat.module';
     }),
     MultimodalModule,
     forwardRef(() => ChatModule),
+    BackofficeModule,
   ],
   controllers: [OrchestratorController],
   providers: [

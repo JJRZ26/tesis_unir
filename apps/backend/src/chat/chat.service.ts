@@ -127,4 +127,41 @@ export class ChatService {
     }
     return this.sessionModel.find(query).sort({ createdAt: -1 }).exec();
   }
+
+  async setLastVerifiedTicket(
+    sessionId: string,
+    ticketId: string,
+    betData: Record<string, unknown>,
+  ): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+
+    session.lastVerifiedTicket = {
+      ticketId,
+      betData,
+      verifiedAt: new Date(),
+    };
+    session.context = SessionContext.TICKET_VERIFICATION;
+
+    await session.save();
+    this.logger.log(`Session ${sessionId} context updated with ticket ${ticketId}`);
+    return session;
+  }
+
+  async getLastVerifiedTicket(sessionId: string): Promise<{
+    ticketId: string;
+    betData: Record<string, unknown>;
+    verifiedAt: Date;
+  } | null> {
+    const session = await this.getSession(sessionId);
+    return session.lastVerifiedTicket || null;
+  }
+
+  async clearTicketContext(sessionId: string): Promise<ChatSessionDocument> {
+    const session = await this.getSession(sessionId);
+    session.lastVerifiedTicket = undefined;
+    session.context = SessionContext.GENERAL;
+    await session.save();
+    this.logger.log(`Session ${sessionId} ticket context cleared`);
+    return session;
+  }
 }

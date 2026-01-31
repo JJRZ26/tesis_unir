@@ -104,6 +104,48 @@ export class MultimodalService {
     });
   }
 
+  /**
+   * Generate a contextual response about a verified ticket
+   * Uses GPT-4 to answer user questions based on ticket/bet data
+   */
+  async generateTicketContextResponse(
+    userQuestion: string,
+    betData: Record<string, unknown>,
+  ): Promise<string> {
+    if (!this.openaiService.isConfigured()) {
+      return 'Lo siento, no puedo procesar tu pregunta en este momento.';
+    }
+
+    try {
+      const systemPrompt = `Eres un asistente de atención al cliente de Sorti365, una casa de apuestas deportivas.
+El usuario acaba de verificar un ticket y tiene preguntas sobre él.
+
+DATOS DEL TICKET:
+${JSON.stringify(betData, null, 2)}
+
+Tu tarea:
+1. Responder las preguntas del usuario basándote ÚNICAMENTE en los datos del ticket proporcionados
+2. Si preguntan "por qué perdí" o similar, explica qué eventos fallaron basándote en los resultados
+3. Sé empático y profesional
+4. Al final de tu respuesta, SIEMPRE pregunta si tiene alguna otra duda sobre este ticket o si desea ayuda con algo más (consulta general, otro ticket, etc.)
+
+Formato de respuesta:
+- Sé conciso pero informativo
+- Usa emojis relevantes para hacer la respuesta más amigable
+- Si hay eventos perdidos, menciona cuáles y por qué (si tienes la información)`;
+
+      const result = await this.openaiService.chat([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userQuestion },
+      ]);
+
+      return result.content;
+    } catch (error) {
+      this.logger.error(`Error generating ticket context response: ${error.message}`);
+      return 'Lo siento, hubo un error al procesar tu pregunta. ¿Podrías reformularla?';
+    }
+  }
+
   private buildVisionContent(dto: AnalyzeImageDto): VisionContent[] {
     const content: VisionContent[] = [];
     const prompts = ANALYSIS_PROMPTS[dto.analysisType];

@@ -23,6 +23,18 @@ export class SessionMetadata {
   ipAddress?: string;
 }
 
+@Schema({ _id: false })
+export class LastVerifiedTicket {
+  @Prop()
+  ticketId: string;
+
+  @Prop({ type: Object })
+  betData: Record<string, unknown>;
+
+  @Prop()
+  verifiedAt: Date;
+}
+
 @Schema({ timestamps: true, collection: 'chat_sessions' })
 export class ChatSession {
   @Prop()
@@ -36,6 +48,9 @@ export class ChatSession {
 
   @Prop({ type: SessionMetadata })
   metadata?: SessionMetadata;
+
+  @Prop({ type: LastVerifiedTicket })
+  lastVerifiedTicket?: LastVerifiedTicket;
 
   createdAt: Date;
   updatedAt: Date;

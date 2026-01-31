@@ -6,11 +6,13 @@ import { HealthModule } from './health/health.module';
 import { ChatModule } from './chat/chat.module';
 import { MultimodalModule } from './multimodal/multimodal.module';
 import { OrchestratorModule } from './orchestrator/orchestrator.module';
+import { BackofficeModule } from './backoffice/backoffice.module';
 
 @Module({
   imports: [
     ConfigModule,
     DatabaseModule,
+    BackofficeModule,
     CacheModule,
     HealthModule,
     ChatModule,

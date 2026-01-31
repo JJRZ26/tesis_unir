@@ -57,6 +57,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_BACKOFFICE_URL=${DB_BACKOFFICE_URL}
       - OCR_SERVICE_URL=http://ocr-service:8001
       - NLP_SERVICE_URL=http://nlp-service:8002
       - CLUSTERING_SERVICE_URL=http://clustering-service:8003

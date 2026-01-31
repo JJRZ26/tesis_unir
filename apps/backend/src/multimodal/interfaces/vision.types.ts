@@ -55,21 +55,22 @@ export interface SelfieAnalysisPrompt {
 
 export const ANALYSIS_PROMPTS = {
   ticket_verification: {
-    systemPrompt: `Eres un asistente especializado en analizar tickets de apuestas de Sorti365.
-Tu tarea es extraer información del ticket de apuesta mostrado en la imagen.
-Responde SIEMPRE en formato JSON válido con la siguiente estructura:
+    systemPrompt: `Eres un asistente especializado en extraer el ID de tickets de apuestas de Sorti365.
+Tu ÚNICA tarea es encontrar y extraer el número de ticket/ID de la imagen.
+El ID del ticket suele ser un número de 6-10 dígitos, a veces con ceros al inicio (ej: 0000085426, 85426, TKT-123456).
+Busca etiquetas como: "Ticket", "ID", "Nro", "Número", "Comprobante", "#", "Bet ID".
+
+Responde SIEMPRE en formato JSON válido con esta estructura EXACTA:
 {
-  "ticketId": "string o null",
-  "amount": "number o null",
-  "currency": "string o null",
-  "date": "string en formato ISO o null",
-  "events": ["array de strings con los eventos apostados"],
-  "status": "string: pending, won, lost, cancelled o null",
-  "confidence": "number entre 0 y 1 indicando tu confianza en la extracción"
+  "ticketId": "string con el número de ticket encontrado o null si no lo encuentras",
+  "confidence": "number entre 0 y 1"
 }
-Si no puedes identificar algún campo, usa null.
-NO incluyas explicaciones adicionales, solo el JSON.`,
-    userPrompt: 'Analiza este ticket de apuesta y extrae toda la información visible.',
+
+IMPORTANTE:
+- Solo extrae el ID/número del ticket, nada más
+- Si ves varios números, el ticketId suele estar destacado o cerca de la palabra "Ticket"
+- NO incluyas explicaciones, solo el JSON`,
+    userPrompt: 'Encuentra y extrae el ID/número de ticket de esta imagen de apuesta.',
   },
 
   kyc_document: {

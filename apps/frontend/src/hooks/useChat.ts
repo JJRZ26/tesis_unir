@@ -211,11 +211,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       clearError();
 
       // Process images if any
-      let imagePayloads: Array<{ base64: string }> | undefined;
+      let imagePayloads: Array<{ base64: string; mimeType: string; filename: string }> | undefined;
       if (images && images.length > 0) {
         imagePayloads = await Promise.all(
           images.map(async (file) => ({
             base64: await fileToBase64(file),
+            mimeType: file.type || 'image/jpeg',
+            filename: file.name,
           }))
         );
       }

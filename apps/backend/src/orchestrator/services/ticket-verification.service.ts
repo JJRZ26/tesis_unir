@@ -1,14 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { MicroservicesClientService } from './microservices-client.service';
 import { MultimodalService } from '../../multimodal/multimodal.service';
+import { BackofficeService } from '../../backoffice/backoffice.service';
 import {
   ProcessingStep,
   ProcessingStatus,
   TicketVerificationResult,
-  TicketEvent,
 } from '../interfaces/orchestrator.types';
 
 export type StatusCallback = (status: ProcessingStatus) => void;
@@ -16,22 +13,18 @@ export type StatusCallback = (status: ProcessingStatus) => void;
 @Injectable()
 export class TicketVerificationService {
   private readonly logger = new Logger(TicketVerificationService.name);
-  private sorti365ApiUrl: string;
-  private sorti365ApiKey: string | undefined;
 
   constructor(
-    private readonly configService: ConfigService,
-    private readonly httpService: HttpService,
     private readonly microservicesClient: MicroservicesClientService,
     private readonly multimodalService: MultimodalService,
-  ) {
-    this.sorti365ApiUrl = this.configService.get<string>('orchestrator.sorti365ApiUrl')!;
-    this.sorti365ApiKey = this.configService.get<string>('orchestrator.sorti365ApiKey');
-  }
+    @Inject(forwardRef(() => BackofficeService))
+    private readonly backofficeService: BackofficeService,
+  ) {}
 
   async verifyTicket(
     imageBase64: string,
     onStatusUpdate?: StatusCallback,
+    userQuestion?: string,
   ): Promise<TicketVerificationResult> {
     const updateStatus = (step: ProcessingStep, message: string, progress: number) => {
       if (onStatusUpdate) {
@@ -43,7 +36,7 @@ export class TicketVerificationService {
       // Step 1: Receive image
       updateStatus(ProcessingStep.RECEIVED, 'Imagen recibida', 10);
 
-      // Step 2: Analyze image with GPT-4 Vision
+      // Step 2: Analyze image with GPT-4 Vision to extract ticket ID
       updateStatus(
         ProcessingStep.ANALYZING_IMAGE,
         'Analizando imagen con IA...',
@@ -58,12 +51,13 @@ export class TicketVerificationService {
       let confidence = 0;
 
       if (visionResult.success && visionResult.extractedData) {
-        const data = visionResult.extractedData as any;
-        ticketId = data.ticketId;
+        const data = visionResult.extractedData as { ticketId?: string; confidence?: number };
+        ticketId = data.ticketId || undefined;
         confidence = data.confidence || 0;
+        this.logger.log(`GPT-4 Vision extracted ticketId: ${ticketId} with confidence: ${confidence}`);
       }
 
-      // Step 3: If Vision didn't find ticket ID, try OCR
+      // Step 3: If Vision didn't find ticket ID, try OCR as fallback
       if (!ticketId) {
         updateStatus(
           ProcessingStep.EXTRACTING_TEXT,
@@ -71,11 +65,16 @@ export class TicketVerificationService {
           40,
         );
 
-        const ocrResult = await this.microservicesClient.extractTicketData(imageBase64);
+        try {
+          const ocrResult = await this.microservicesClient.extractTicketData(imageBase64);
 
-        if (ocrResult.success && ocrResult.ticket_id) {
-          ticketId = ocrResult.ticket_id;
-          confidence = ocrResult.confidence || 0.7;
+          if (ocrResult.success && ocrResult.ticket_id) {
+            ticketId = ocrResult.ticket_id;
+            confidence = ocrResult.confidence || 0.7;
+            this.logger.log(`OCR extracted ticketId: ${ticketId}`);
+          }
+        } catch (ocrError) {
+          this.logger.warn(`OCR fallback failed: ${ocrError}`);
         }
       }
 
@@ -85,26 +84,26 @@ export class TicketVerificationService {
         return {
           success: false,
           confidence: 0,
-          error: 'No se pudo identificar el número de ticket en la imagen',
+          error: 'No se pudo identificar el número de ticket en la imagen. Por favor, asegúrate de que el número del ticket sea visible y legible.',
         };
       }
 
-      // Step 4: Query Sorti365 API
+      // Step 4: Query Backoffice database
       updateStatus(
         ProcessingStep.QUERYING_API,
         `Consultando ticket ${ticketId}...`,
         60,
       );
 
-      const ticketData = await this.queryTicketApi(ticketId);
+      const betResult = await this.backofficeService.findBetByLocalId(ticketId);
 
-      if (!ticketData) {
+      if (!betResult.found || !betResult.bet) {
         updateStatus(ProcessingStep.ERROR, 'Ticket no encontrado', 100);
         return {
           success: false,
           ticketId,
           confidence,
-          error: `No se encontró información para el ticket ${ticketId}`,
+          error: `No se encontró ninguna apuesta con el ID ${ticketId}. Por favor verifica que el número sea correcto.`,
         };
       }
 
@@ -121,8 +120,9 @@ export class TicketVerificationService {
       return {
         success: true,
         ticketId,
-        ticketData,
+        bet: betResult.bet,
         confidence,
+        userQuestion,
       };
     } catch (error) {
       this.logger.error(`Ticket verification failed: ${error}`);
@@ -136,125 +136,17 @@ export class TicketVerificationService {
     }
   }
 
-  private async queryTicketApi(ticketId: string): Promise<{
-    status: string;
-    amount: number;
-    currency: string;
-    events: TicketEvent[];
-    createdAt: string;
-    paidAt?: string;
-  } | null> {
-    // In production, this would call the actual Sorti365 API
-    // For development, we'll simulate the response
-
-    if (!this.sorti365ApiKey) {
-      this.logger.warn('Sorti365 API key not configured, using mock data');
-      return this.getMockTicketData(ticketId);
-    }
-
-    try {
-      const response = await firstValueFrom(
-        this.httpService
-          .get(`${this.sorti365ApiUrl}/tickets/${ticketId}`, {
-            headers: {
-              Authorization: `Bearer ${this.sorti365ApiKey}`,
-            },
-          })
-          .pipe(
-            timeout(10000),
-            catchError((error) => {
-              this.logger.error(`Sorti365 API error: ${error.message}`);
-              throw error;
-            }),
-          ),
-      );
-
-      return response.data;
-    } catch (error) {
-      this.logger.error(`Failed to query ticket API: ${error}`);
-      // Return mock data in case of error for development
-      return this.getMockTicketData(ticketId);
-    }
-  }
-
-  private getMockTicketData(ticketId: string): {
-    status: string;
-    amount: number;
-    currency: string;
-    events: TicketEvent[];
-    createdAt: string;
-    paidAt?: string;
-  } {
-    // Mock data for development/testing
-    const statuses = ['pending', 'won', 'lost'];
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-
-    return {
-      status: randomStatus,
-      amount: Math.floor(Math.random() * 100000) + 10000,
-      currency: 'COP',
-      events: [
-        {
-          eventId: 'EVT001',
-          name: 'Real Madrid vs Barcelona',
-          sport: 'Fútbol',
-          selection: 'Real Madrid',
-          odds: 2.1,
-          result: randomStatus === 'pending' ? 'pending' : randomStatus === 'won' ? 'won' : 'lost',
-        },
-        {
-          eventId: 'EVT002',
-          name: 'Lakers vs Celtics',
-          sport: 'Baloncesto',
-          selection: 'Lakers +5.5',
-          odds: 1.85,
-          result: randomStatus === 'pending' ? 'pending' : randomStatus === 'won' ? 'won' : 'lost',
-        },
-      ],
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-      paidAt: randomStatus === 'won' ? new Date().toISOString() : undefined,
-    };
-  }
-
   formatTicketResponse(result: TicketVerificationResult): string {
     if (!result.success) {
       return `Lo siento, ${result.error}`;
     }
 
-    const { ticketId, ticketData } = result;
-
-    if (!ticketData) {
-      return `Ticket ${ticketId} encontrado pero sin datos disponibles.`;
+    // If we have a bet from backoffice, use its formatting
+    if (result.bet) {
+      return this.backofficeService.formatBetResponse(result.bet, result.userQuestion);
     }
 
-    const statusMessages: Record<string, string> = {
-      pending: '⏳ En juego',
-      won: '🎉 ¡Ganador!',
-      lost: '😔 Perdido',
-    };
-
-    const statusEmoji = statusMessages[ticketData.status] || ticketData.status;
-
-    let response = `📋 **Ticket #${ticketId}**\n\n`;
-    response += `**Estado:** ${statusEmoji}\n`;
-    response += `**Monto:** $${ticketData.amount.toLocaleString()} ${ticketData.currency}\n`;
-    response += `**Fecha:** ${new Date(ticketData.createdAt).toLocaleDateString('es-ES')}\n\n`;
-
-    response += `**Eventos:**\n`;
-    for (const event of ticketData.events) {
-      const eventResult =
-        event.result === 'won'
-          ? '✅'
-          : event.result === 'lost'
-            ? '❌'
-            : '⏳';
-      response += `${eventResult} ${event.name} - ${event.selection} (${event.odds})\n`;
-    }
-
-    if (ticketData.paidAt) {
-      response += `\n💰 **Pagado:** ${new Date(ticketData.paidAt).toLocaleDateString('es-ES')}`;
-    }
-
-    return response;
+    // Fallback if somehow we have success but no bet data
+    return `Ticket ${result.ticketId} encontrado pero sin datos disponibles.`;
   }
 }

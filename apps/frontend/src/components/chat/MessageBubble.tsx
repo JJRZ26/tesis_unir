@@ -1,9 +1,15 @@
 'use client';
 
-import { ChatMessage, MessageRole, ContentType, FlowType } from '@/types';
+import { ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { ChatMessage, MessageRole, FlowType } from '@/types';
 
 interface MessageBubbleProps {
   message: ChatMessage;
+}
+
+interface MarkdownComponentProps {
+  children?: ReactNode;
 }
 
 const flowTypeLabels: Record<FlowType, string> = {
@@ -56,36 +62,83 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         {/* Images */}
-        {message.content.type !== ContentType.TEXT &&
-          message.content.images &&
-          message.content.images.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
-              {message.content.images.map((img, idx) => (
+        {message.content.images && message.content.images.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {message.content.images.map((img, idx) => {
+              // Construir la URL de la imagen
+              let imgSrc = '';
+              if (img.url) {
+                imgSrc = img.url;
+              } else if (img.base64) {
+                const mimeType = img.mimeType || 'image/jpeg';
+                imgSrc = `data:${mimeType};base64,${img.base64}`;
+              }
+
+              if (!imgSrc) return null;
+
+              return (
                 <div
                   key={idx}
-                  className="relative w-32 h-32 rounded-lg overflow-hidden"
+                  className="relative w-40 h-40 rounded-lg overflow-hidden border border-gray-200"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.url || `data:${img.mimeType || 'image/jpeg'};base64,${img.base64}`}
+                    src={imgSrc}
                     alt={img.filename || `Imagen ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(imgSrc, '_blank')}
                   />
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
+        )}
 
         {/* Text content */}
         {message.content.text && (
-          <p className="whitespace-pre-wrap break-words">
-            {message.content.text}
-          </p>
+          <div className={`${isUser ? '' : 'prose prose-sm max-w-none'}`}>
+            {isUser ? (
+              <p className="whitespace-pre-wrap break-words m-0">
+                {message.content.text}
+              </p>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }: MarkdownComponentProps) => (
+                    <p className="mb-2 last:mb-0 whitespace-pre-wrap">{children}</p>
+                  ),
+                  strong: ({ children }: MarkdownComponentProps) => (
+                    <strong className="font-bold">{children}</strong>
+                  ),
+                  ul: ({ children }: MarkdownComponentProps) => (
+                    <ul className="list-disc pl-4 mb-2">{children}</ul>
+                  ),
+                  ol: ({ children }: MarkdownComponentProps) => (
+                    <ol className="list-decimal pl-4 mb-2">{children}</ol>
+                  ),
+                  li: ({ children }: MarkdownComponentProps) => (
+                    <li className="mb-1">{children}</li>
+                  ),
+                  h1: ({ children }: MarkdownComponentProps) => (
+                    <h1 className="text-lg font-bold mb-2">{children}</h1>
+                  ),
+                  h2: ({ children }: MarkdownComponentProps) => (
+                    <h2 className="text-base font-bold mb-2">{children}</h2>
+                  ),
+                  h3: ({ children }: MarkdownComponentProps) => (
+                    <h3 className="text-sm font-bold mb-1">{children}</h3>
+                  ),
+                }}
+              >
+                {message.content.text}
+              </ReactMarkdown>
+            )}
+          </div>
         )}
 
         {/* Timestamp */}
         <div
-          className={`text-xs mt-1 ${
+          className={`text-xs mt-2 ${
             isUser ? 'text-gray-300' : 'text-gray-400'
           }`}
         >

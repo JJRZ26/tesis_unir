@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { ContentType } from './schemas/chat-message.schema';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { ProcessingStatus } from '../orchestrator/interfaces/orchestrator.types';
 
@@ -22,7 +23,7 @@ interface MessagePayload {
   sessionId: string;
   playerId?: string;
   content: SendMessageDto['content'];
-  images?: Array<{ base64?: string; url?: string }>;
+  images?: Array<{ base64?: string; url?: string; mimeType?: string; filename?: string }>;
 }
 
 interface TypingPayload {
@@ -84,9 +85,37 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: MessagePayload,
   ) {
     try {
-      // Save user message
+      // Build content with images included for storage
+      const hasImages = payload.images && payload.images.length > 0;
+      const hasText = payload.content?.text && payload.content.text.trim().length > 0;
+
+      // Determine content type
+      let contentType: ContentType;
+      if (hasImages && hasText) {
+        contentType = ContentType.MIXED;
+      } else if (hasImages) {
+        contentType = ContentType.IMAGE;
+      } else {
+        contentType = ContentType.TEXT;
+      }
+
+      const messageContent: SendMessageDto['content'] = {
+        type: contentType,
+        text: payload.content?.text,
+        // Include images in content so they are stored in database
+        images: hasImages && payload.images
+          ? payload.images.map((img) => ({
+              base64: img.base64,
+              url: img.url,
+              mimeType: img.mimeType || 'image/jpeg',
+              filename: img.filename,
+            }))
+          : undefined,
+      };
+
+      // Save user message with images
       const userMessage = await this.chatService.addMessage(payload.sessionId, {
-        content: payload.content,
+        content: messageContent,
       });
 
       const userMessageResponse = {
@@ -117,7 +146,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       };
 
-      const { response, flowType } = await this.orchestratorService.processMessage(
+      const { flowType } = await this.orchestratorService.processMessage(
         {
           sessionId: payload.sessionId,
           playerId: payload.playerId,

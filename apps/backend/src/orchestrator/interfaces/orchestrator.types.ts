@@ -34,6 +34,9 @@ export interface TicketVerificationResult {
     createdAt: string;
     paidAt?: string;
   };
+  // Bet document from backoffice database
+  bet?: any;
+  userQuestion?: string;
   confidence: number;
   error?: string;
 }
