@@ -6,6 +6,7 @@ import { MultimodalService } from '../multimodal/multimodal.service';
 import { ChatService } from '../chat/chat.service';
 import { BackofficeService } from '../backoffice/backoffice.service';
 import { ProcessMessageDto } from './dto/process-message.dto';
+import { AnalysisType } from '../multimodal/dto/analyze-image.dto';
 import {
   FlowType,
   ProcessingStatus,
@@ -118,7 +119,7 @@ export class OrchestratorService {
 
       // Use GPT-4 Vision to analyze what type of image it is
       const visionResult = await this.multimodalService.analyzeImage({
-        analysisType: 'general' as any,
+        analysisType: AnalysisType.GENERAL,
         images: [{ base64: imageBase64 }],
         additionalContext:
           'Determina si esta imagen es: 1) Un ticket de apuesta, 2) Un documento de identidad (cédula), 3) Una selfie con documento, o 4) Otro tipo de imagen.',
@@ -392,7 +393,7 @@ export class OrchestratorService {
   private async processKYCFrontDocument(
     sessionId: string,
     playerId: string,
-    playerName: string,
+    _playerName: string,
     imageBase64: string,
     onStatusUpdate?: (status: ProcessingStatus) => void,
   ): Promise<string> {
@@ -552,7 +553,7 @@ export class OrchestratorService {
     // For general queries, use GPT-4 Vision if there are images
     if (images && images.length > 0) {
       const visionResult = await this.multimodalService.analyzeImage({
-        analysisType: 'general' as any,
+        analysisType: AnalysisType.GENERAL,
         images: images.map((img) => ({ base64: img.base64 })),
         additionalContext: text,
       });

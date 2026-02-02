@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MicroservicesClientService } from './microservices-client.service';
 import { MultimodalService } from '../../multimodal/multimodal.service';
 import { BackofficeService } from '../../backoffice/backoffice.service';
+import { AnalysisType } from '../../multimodal/dto/analyze-image.dto';
 import {
   ProcessingStep,
   ProcessingStatus,
@@ -220,7 +221,7 @@ export class KYCVerificationService {
 
       // Analyze back of document
       const visionResult = await this.multimodalService.analyzeImage({
-        analysisType: 'document' as any,
+        analysisType: AnalysisType.KYC_DOCUMENT,
         images: [{ base64: imageBase64 }],
         additionalContext: `Analiza esta imagen del reverso de un documento de identidad (cédula ecuatoriana o similar).
 
@@ -345,7 +346,7 @@ Solo marca como false si claramente NO es un documento o está completamente ile
 
       // Analyze selfie with document comparison
       const selfieResult = await this.multimodalService.analyzeImage({
-        analysisType: 'selfie' as any,
+        analysisType: AnalysisType.KYC_SELFIE,
         images: [
           { base64: selfieBase64 },
           { base64: frontDocumentBase64 },
